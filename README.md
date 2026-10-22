@@ -744,3 +744,56 @@ wallet.balance == saldo reconstruído pelo ledger
 ### Diferenciais opcionais
 
 Teste de carga também conta como diferencial. Se fizer, exponha como `bun run test:load` e registre ambiente, metodologia, throughput, p50/p95/p99, taxa de erro, conflitos de concorrência e outbox lag. Não há meta de RPS — a qualidade do experimento e a honestidade da análise pesam mais que o número bruto.
+
+---
+
+## Setup & Run (implementation)
+
+### Prerequisites
+- Bun 1.x, Node 22+, Docker Desktop.
+
+### Start infra
+```bash
+docker compose up -d
+```
+Starts PostgreSQL (5432), LocalStack (4566) with SQS queues, and Keycloak (8080).
+
+### Install deps
+```bash
+bun install
+```
+
+### Run app (migrations auto-apply)
+```bash
+cp .env.example .env
+bun run start
+```
+
+### Health
+```bash
+curl http://localhost:3000/health/live
+curl http://localhost:3000/health/ready
+```
+
+### Example: create wallet + bet
+```bash
+curl -X POST http://localhost:3000/wallets -H 'Content-Type: application/json' \
+  -d '{"playerId":"p1","initialBalance":{"amount":"100.00","currency":"BRL"}}'
+
+curl -X POST http://localhost:3000/wagering/transactions \
+  -H 'Content-Type: application/json' -H 'Idempotency-Key: pa:t1' \
+  -d '{"providerId":"pa","externalTransactionId":"t1","playerId":"p1","walletId":"<id>","roundId":"r1","gameId":"g1","kind":"BET","money":{"amount":"25.00","currency":"BRL"}}'
+```
+
+### Keycloak token (optional auth)
+```bash
+curl -X POST http://localhost:8080/realms/wagering/protocol/openid-connect/token \
+  -d 'grant_type=password&client_id=wagering-api&client_secret=wagering-api-secret&username=testuser&password=testpass'
+```
+
+### Tests
+```bash
+bun run test:unit
+bun run test:integration
+bun run test:concurrency
+```
