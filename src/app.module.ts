@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { PassportModule } from '@nestjs/passport';
 import { MikroORM } from '@mikro-orm/core';
 import { PostgreSqlDriver } from '@mikro-orm/postgresql';
 import { EntityManager } from '@mikro-orm/core';
@@ -24,6 +25,7 @@ import { createSqsClient } from './infrastructure/messaging/sqs/sqs-client.js';
 import { SqsProducer } from './infrastructure/messaging/sqs/sqs-producer.js';
 
 import { KeycloakAuthGuard } from './infrastructure/auth/keycloak-auth.guard.js';
+import { KeycloakJwtStrategy } from './infrastructure/auth/jwt.strategy.js';
 
 import { OpenWalletUseCase } from './application/use-cases/open-wallet.use-case.js';
 import { SubmitWagerTransactionUseCase } from './application/use-cases/submit-wager-transaction.use-case.js';
@@ -36,7 +38,7 @@ import { WageringController } from './api/controllers/wagering.controller.js';
 import { HealthController } from './api/controllers/health.controller.js';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true })],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), PassportModule.register({ defaultStrategy: 'jwt' })],
   controllers: [WalletsController, WageringController, HealthController],
   providers: [
     {
@@ -149,6 +151,7 @@ import { HealthController } from './api/controllers/health.controller.js';
       inject: ['LedgerEntryRepository'],
     },
     KeycloakAuthGuard,
+    KeycloakJwtStrategy,
     // Health controller needs EntityManager
     {
       provide: EntityManager,

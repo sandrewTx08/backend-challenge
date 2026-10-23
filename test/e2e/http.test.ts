@@ -3,29 +3,46 @@
 import { test, expect } from 'bun:test';
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:3000';
+const KEYCLOAK_ISSUER = process.env.KEYCLOAK_ISSUER ?? 'http://localhost:8080/realms/wagering';
+const KEYCLOAK_CLIENT_SECRET = process.env.KEYCLOAK_CLIENT_SECRET ?? 'wagering-api-secret';
+const KEYCLOAK_USERNAME = process.env.KEYCLOAK_TEST_USERNAME ?? 'testuser';
+const KEYCLOAK_PASSWORD = process.env.KEYCLOAK_TEST_PASSWORD ?? 'testpass';
 
 let serverUp = false;
 let token: string | null = null;
+let authRequired = true;
 try {
   const r = await fetch(BASE + '/health/live');
   serverUp = r.ok;
 } catch {
   serverUp = false;
 }
-// Try to obtain a Keycloak token (optional)
-try {
-  const tr = await fetch('http://localhost:8080/realms/wagering/protocol/openid-connect/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'grant_type=password&client_id=wagering-api&client_secret=wagering-api-secret&username=testuser&password=testpass',
-  });
-  if (tr.ok) {
-    const j: any = await tr.json();
-    token = j.access_token ?? null;
+// Try to obtain a Keycloak token from multiple possible hosts
+const kcHosts = ['http://localhost:8080', 'http://keycloak:8080', KEYCLOAK_ISSUER.replace(/\/realms\/.*/, '')];
+for (const host of kcHosts) {
+  if (token) break;
+  try {
+    const tr = await fetch(`${host}/realms/wagering/protocol/openid-connect/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=password&client_id=wagering-api&client_secret=${KEYCLOAK_CLIENT_SECRET}&username=${KEYCLOAK_USERNAME}&password=${KEYCLOAK_PASSWORD}`,
+    });
+    if (tr.ok) {
+      const j: any = await tr.json();
+      token = j.access_token ?? null;
+    }
+  } catch {
+    // try next
   }
-} catch (e) {
-  console.log('token fetch error:', e);
-  token = null;
+}
+// If no token, check if the API is in no-op auth mode (protected endpoint accessible without token)
+if (!token && serverUp) {
+  try {
+    const r = await fetch(BASE + '/wallets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ playerId: 'probe', initialBalance: { amount: '1.00', currency: 'BRL' } }) });
+    if (r.status !== 401) authRequired = false;
+  } catch {
+    // ignore
+  }
 }
 
 function authHeaders(): Record<string, string> {
@@ -53,7 +70,7 @@ test.skipIf(!serverUp)('health live and ready', async () => {
 });
 
 // README Section 9: create wallet
-test.skipIf(!serverUp || !token)('create wallet returns balance and version', async () => {
+test.skipIf(!serverUp || (authRequired && !token))('create wallet returns balance and version', async () => {
   const playerId = 'e2e-' + crypto.randomUUID();
   const res = await req('/wallets', {
     method: 'POST',
@@ -66,7 +83,7 @@ test.skipIf(!serverUp || !token)('create wallet returns balance and version', as
 });
 
 // README Section 9 / 7: submit BET then idempotent replay
-test.skipIf(!serverUp || !token)('submit BET and idempotent replay', async () => {
+test.skipIf(!serverUp || (authRequired && !token))('submit BET and idempotent replay', async () => {
   const playerId = 'e2e-' + crypto.randomUUID();
   const w = await req('/wallets', {
     method: 'POST',
@@ -101,7 +118,7 @@ test.skipIf(!serverUp || !token)('submit BET and idempotent replay', async () =>
 });
 
 // README Section 9: reconciliation consistent
-test.skipIf(!serverUp || !token)('reconciliation consistent after operations', async () => {
+test.skipIf(!serverUp || (authRequired && !token))('reconciliation consistent after operations', async () => {
   const playerId = 'e2e-' + crypto.randomUUID();
   const w = await req('/wallets', {
     method: 'POST',
