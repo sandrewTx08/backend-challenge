@@ -12,15 +12,10 @@
     "migration:up": "bunx mikro-orm migration:up",
     "migration:down": "bunx mikro-orm migration:down",
     "test": "bun test",
-    "test:unit": "bun test test/unit",
-    "test:integration": "bun test test/integration",
-    "test:concurrency": "bun test test/concurrency",
     "test:load": "bun run test/load.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "docker:dev": "docker compose --env-file ./.env.dev up -d --build postgres localstack keycloak",
+    "docker:dev": "docker compose down && docker compose --env-file ./.env.dev up -d --build postgres localstack keycloak && bun run start:dev",
     "docker:prod": "docker compose --env-file ./.env.prod up -d --build",
-    "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f",
     "lint": "bunx eslint 'src/**/*.ts' 'test/**/*.ts' 2>/dev/null || true"
   },
   "dependencies": {

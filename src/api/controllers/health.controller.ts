@@ -38,6 +38,23 @@ export class HealthController {
     } catch (e) {
       checks.sqs = 'fail';
     }
+    // Keyclock
+    try {
+      const jwksUri = process.env.KEYCLOAK_JWKS_URI;
+      if (jwksUri) {
+        const res = await fetch(jwksUri);
+        if (res.ok) {
+          checks.keycloak = 'ok';
+        } else {
+          checks.keycloak = 'fail';
+        }
+      } else {
+        checks.keycloak = 'skipped';
+      }
+    } catch (e) {
+      checks.keycloak = 'fail';
+    }
+    
     const allOk = Object.values(checks).every((v) => v === 'ok' || v === 'skipped');
     return { status: allOk ? 'ready' : 'not_ready', checks };
   }

@@ -15,8 +15,7 @@ SQL transaction spanning wallet, ledger, inbox and outbox.
   `LockMode.PESSIMISTIC_WRITE` for per-wallet row locks.
 - DB: PostgreSQL 15
 - Messaging: AWS SQS FIFO via LocalStack 3.8
-- Auth: Keycloak (OIDC/JWT) — optional; runs in no-op mode when
-  `KEYCLOAK_JWKS_URI` is unset.
+- Auth: Keycloak (OIDC/JWT) — Authentication via a JWT Bearer token in the `Authorization` header (`Authorization: Bearer <token>`) is required across the domain/API layer.
 - Migrations: MikroORM migrator, versioned & reversible.
 - Proxy: nginx (least_conn) in front of API replicas.
 
@@ -72,7 +71,7 @@ base64 cursor (createdAt + id), returning `nextCursor`.
 
 ## Health
 
-`GET /health/live` (liveness), `GET /health/ready` (Postgres + SQS).
+`GET /health/live` (liveness), `GET /health/ready` (Postgres, SQS and Keyclock).
 
 ## Scaling / Replica mode
 
@@ -85,10 +84,7 @@ base64 cursor (createdAt + id), returning `nextCursor`.
 ### Local development
 
 ```bash
-bun install
-bun docker:down
 bun docker:dev
-bun start:dev          # migrations auto-apply
 ```
 
 ### Docker deployment
@@ -101,11 +97,10 @@ Health: `curl http://localhost:3000/health/live`
 
 ## Tests
 
-- Unit: `bun run test:unit`
-- Integration: `bun run test:integration`
-- Concurrency: `bun run test:concurrency`
-- E2E (HTTP): `BASE_URL=http://localhost:3000 bun test test/e2e`
-- Load: `bun run test:load`
+(Ensure Keycloak is fully ready before running tests/load tests; requests may return `401 Unauthorized` if Keycloak is still starting up or initializing).
+
+- Tests: `bun run test`
+- Load Test: `bun run test:load`
 
 ## Limitations / trade-offs
 
@@ -114,4 +109,7 @@ Health: `curl http://localhost:3000/health/live`
 - Reconciliation reports divergence but never silently corrects.
 - Pending-reference worker runs in-process (single leader not enforced;
   reprocessing is idempotent).
-- Keycloak runs in no-op mode when `KEYCLOAK_JWKS_URI` is unset.
+  ```bash
+  curl -X POST http://localhost:3000/realms/wagering/protocol/openid-connect/token \
+    -d 'grant_type=password&client_id=wagering-api&client_secret=wagering-api-secret&username=testuser&password=testpass'
+  ```
