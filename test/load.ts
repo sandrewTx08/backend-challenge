@@ -1,30 +1,40 @@
 // Load test script: `bun run test:load`
 // Fires concurrent BET requests against a running instance.
 // Env: BASE_URL, WORKERS(20), REQUESTS(200), AMOUNT(1.00), KEYCLOAK_*
-import { performance } from 'node:perf_hooks';
+import { performance } from "node:perf_hooks";
 
-const BASE = process.env.BASE_URL ?? 'http://localhost:3000';
-const KEYCLOAK_ISSUER = (process.env.KEYCLOAK_ISSUER ?? 'http://localhost:8080/realms/wagering').split(',')[0].trim();
-const KEYCLOAK_CLIENT_SECRET = process.env.KEYCLOAK_CLIENT_SECRET ?? 'wagering-api-secret';
-const WORKERS = parseInt(process.env.WORKERS ?? '20', 10);
-const REQUESTS = parseInt(process.env.REQUESTS ?? '10000', 10);
-const AMOUNT = process.env.AMOUNT ?? '1.00';
+const BASE = process.env.BASE_URL ?? "http://localhost:3000";
+const KEYCLOAK_ISSUER =
+  process.env.KEYCLOAK_ISSUER ?? "http://localhost:8080/realms/wagering";
+const KEYCLOAK_CLIENT_SECRET =
+  process.env.KEYCLOAK_CLIENT_SECRET ?? "wagering-api-secret";
+const WORKERS = parseInt(process.env.WORKERS ?? "20", 10);
+const REQUESTS = parseInt(process.env.REQUESTS ?? "10000", 10);
+const AMOUNT = process.env.AMOUNT ?? "1.00";
 
 const latencies: number[] = [];
-let ok = 0, errors = 0, conflicts = 0, other = 0, done = 0;
+let ok = 0,
+  errors = 0,
+  conflicts = 0,
+  other = 0,
+  done = 0;
 const startAll = performance.now();
 let finished = false;
 
 function bar(pct: number, width = 40) {
   const filled = Math.round((pct / 100) * width);
-  return '[' + '#'.repeat(filled) + '-'.repeat(width - filled) + ']';
+  return "[" + "#".repeat(filled) + "-".repeat(width - filled) + "]";
 }
 
 function printStatus() {
   const elapsed = (performance.now() - startAll) / 1000;
   const pct = (done / REQUESTS) * 100;
-  const rps = elapsed > 0 ? (done / elapsed).toFixed(1) : '0.0';
-  process.stdout.write(`\r${bar(pct)} ${pct.toFixed(1)}%  ${done}/${REQUESTS}  RPS:${rps}  ok:${ok} err:${errors} conf:${conflicts}  `);
+  const rps = elapsed > 0 ? (done / elapsed).toFixed(1) : "0.0";
+  process.stdout.write(
+    `\r${bar(pct)} ${pct.toFixed(
+      1
+    )}%  ${done}/${REQUESTS}  RPS:${rps}  ok:${ok} err:${errors} conf:${conflicts}  `
+  );
 }
 
 function printFinal() {
@@ -33,22 +43,31 @@ function printFinal() {
   const totalMs = performance.now() - startAll;
   const rps = (done / (totalMs / 1000)).toFixed(2);
   latencies.sort((a, b) => a - b);
-  const pct = (p: number) => latencies[Math.floor((p / 100) * (latencies.length - 1))] ?? 0;
+  const pct = (p: number) =>
+    latencies[Math.floor((p / 100) * (latencies.length - 1))] ?? 0;
   const p50 = pct(50).toFixed(2);
   const p95 = pct(95).toFixed(2);
   const p99 = pct(99).toFixed(2);
-  const avg = latencies.length ? (latencies.reduce((a, b) => a + b, 0) / latencies.length).toFixed(2) : '0';
-  const errRate = ((errors + conflicts) / Math.max(1, done) * 100).toFixed(2);
-  process.stdout.write('\n');
-  console.log('\n=== Load Test Report ===');
+  const avg = latencies.length
+    ? (latencies.reduce((a, b) => a + b, 0) / latencies.length).toFixed(2)
+    : "0";
+  const errRate = (((errors + conflicts) / Math.max(1, done)) * 100).toFixed(2);
+  process.stdout.write("\n");
+  console.log("\n=== Load Test Report ===");
   console.log(`Requests: ${done}/${REQUESTS}  Workers: ${WORKERS}`);
   console.log(`Total time: ${totalMs.toFixed(2)} ms`);
   console.log(`Throughput: ${rps} RPS`);
-  console.log(`Latency ms  -> avg: ${avg}  p50: ${p50}  p95: ${p95}  p99: ${p99}`);
-  console.log(`Processed: ${ok}  Conflicts(409): ${conflicts}  Errors: ${errors}  Other: ${other}`);
+  console.log(
+    `Latency ms  -> avg: ${avg}  p50: ${p50}  p95: ${p95}  p99: ${p99}`
+  );
+  console.log(
+    `Processed: ${ok}  Conflicts(409): ${conflicts}  Errors: ${errors}  Other: ${other}`
+  );
   console.log(`Error rate: ${errRate}%`);
-  console.log(`Outbox lag: N/A (requires DB access; check outbox_messages.published_at)`);
-  console.log('========================\n');
+  console.log(
+    `Outbox lag: N/A (requires DB access; check outbox_messages.published_at)`
+  );
+  console.log("========================\n");
 }
 
 async function req(path: string, init?: RequestInit) {
@@ -57,20 +76,27 @@ async function req(path: string, init?: RequestInit) {
     const res = await fetch(BASE + path, init);
     const text = await res.text();
     let json: any = null;
-    try { json = text ? JSON.parse(text) : null; } catch {}
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch {}
     return { status: res.status, json, latency: performance.now() - start };
   } catch (e: any) {
-    return { status: 0, json: null, latency: performance.now() - start, error: String(e) };
+    return {
+      status: 0,
+      json: null,
+      latency: performance.now() - start,
+      error: String(e),
+    };
   }
 }
 
 async function getToken() {
-  const username = process.env.KEYCLOAK_TEST_USERNAME ?? 'testuser';
-  const password = process.env.KEYCLOAK_TEST_PASSWORD ?? 'testpass';
+  const username = process.env.KEYCLOAK_TEST_USERNAME ?? "testuser";
+  const password = process.env.KEYCLOAK_TEST_PASSWORD ?? "testpass";
   try {
     const tr = await fetch(`${KEYCLOAK_ISSUER}/protocol/openid-connect/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: `grant_type=password&client_id=wagering-api&client_secret=${KEYCLOAK_CLIENT_SECRET}&username=${username}&password=${password}`,
     });
     if (tr.ok) return ((await tr.json()) as any).access_token as string;
@@ -79,20 +105,30 @@ async function getToken() {
 }
 
 async function main() {
-  console.log(`Load test: ${WORKERS} workers, ${REQUESTS} requests, amount ${AMOUNT}, base ${BASE}`);
+  console.log(
+    `Load test: ${WORKERS} workers, ${REQUESTS} requests, amount ${AMOUNT}, base ${BASE}`
+  );
   const runId = crypto.randomUUID().slice(0, 8);
-  const playerId = 'load-' + runId;
+  const playerId = "load-" + runId;
   const token = await getToken();
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const w = await req('/wallets', {
-    method: 'POST',
+  const w = await req("/wallets", {
+    method: "POST",
     headers,
-    body: JSON.stringify({ playerId, initialBalance: { amount: String(REQUESTS * parseFloat(AMOUNT) + 100), currency: 'BRL' } }),
+    body: JSON.stringify({
+      playerId,
+      initialBalance: {
+        amount: String(REQUESTS * parseFloat(AMOUNT) + 100),
+        currency: "BRL",
+      },
+    }),
   });
   if (w.status !== 201) {
-    console.error('Failed to create wallet:', w.status, w.json);
+    console.error("Failed to create wallet:", w.status, w.json);
     process.exit(1);
   }
   const walletId = (w.json as any).id;
@@ -106,18 +142,23 @@ async function main() {
       const i = counter++;
       if (i >= REQUESTS) break;
       const extId = `load-${runId}-${i}`;
-      const r = await req('/wagering/transactions', {
-        method: 'POST',
-        headers: { ...headers, 'Idempotency-Key': `pa:${extId}` },
+      const r = await req("/wagering/transactions", {
+        method: "POST",
+        headers: { ...headers, "Idempotency-Key": `pa:${extId}` },
         body: JSON.stringify({
-          providerId: 'pa', externalTransactionId: extId, playerId, walletId,
-          roundId: 'load-round', gameId: 'load-game', kind: 'BET',
-          money: { amount: AMOUNT, currency: 'BRL' },
+          providerId: "pa",
+          externalTransactionId: extId,
+          playerId,
+          walletId,
+          roundId: "load-round",
+          gameId: "load-game",
+          kind: "BET",
+          money: { amount: AMOUNT, currency: "BRL" },
         }),
       });
       latencies.push(r.latency);
       done++;
-      if (r.status === 200 && r.json?.status === 'PROCESSED') ok++;
+      if (r.status === 200 && r.json?.status === "PROCESSED") ok++;
       else if (r.status === 409) conflicts++;
       else if (r.status >= 400) errors++;
       else other++;
@@ -130,7 +171,16 @@ async function main() {
   printFinal();
 }
 
-process.on('SIGINT', () => { printFinal(); process.exit(0); });
-process.on('SIGTERM', () => { printFinal(); process.exit(0); });
+process.on("SIGINT", () => {
+  printFinal();
+  process.exit(0);
+});
+process.on("SIGTERM", () => {
+  printFinal();
+  process.exit(0);
+});
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

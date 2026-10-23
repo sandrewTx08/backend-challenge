@@ -17,7 +17,7 @@
     "test:concurrency": "bun test test/concurrency",
     "test:load": "bun run test/load.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "docker:dev": "docker compose --env-file ./.env.dev up -d --build postgres localstack keycloak proxy",
+    "docker:dev": "docker compose --env-file ./.env.dev up -d --build postgres localstack keycloak",
     "docker:prod": "docker compose --env-file ./.env.prod up -d --build",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
