@@ -4,7 +4,7 @@
 import { performance } from 'node:perf_hooks';
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:3000';
-const KEYCLOAK_ISSUER = process.env.KEYCLOAK_ISSUER ?? 'http://localhost:8080/realms/wagering';
+const KEYCLOAK_ISSUER = (process.env.KEYCLOAK_ISSUER ?? 'http://localhost:8080/realms/wagering').split(',')[0].trim();
 const KEYCLOAK_CLIENT_SECRET = process.env.KEYCLOAK_CLIENT_SECRET ?? 'wagering-api-secret';
 const WORKERS = parseInt(process.env.WORKERS ?? '20', 10);
 const REQUESTS = parseInt(process.env.REQUESTS ?? '10000', 10);
@@ -65,12 +65,13 @@ async function req(path: string, init?: RequestInit) {
 }
 
 async function getToken() {
+  const username = process.env.KEYCLOAK_TEST_USERNAME ?? 'testuser';
+  const password = process.env.KEYCLOAK_TEST_PASSWORD ?? 'testpass';
   try {
-    const tokenUrl = `${KEYCLOAK_ISSUER}/protocol/openid-connect/token`;
-    const tr = await fetch(tokenUrl, {
+    const tr = await fetch(`${KEYCLOAK_ISSUER}/protocol/openid-connect/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `grant_type=password&client_id=wagering-api&client_secret=${KEYCLOAK_CLIENT_SECRET}&username=${process.env.KEYCLOAK_TEST_USERNAME ?? 'testuser'}&password=${process.env.KEYCLOAK_TEST_PASSWORD ?? 'testpass'}`,
+      body: `grant_type=password&client_id=wagering-api&client_secret=${KEYCLOAK_CLIENT_SECRET}&username=${username}&password=${password}`,
     });
     if (tr.ok) return ((await tr.json()) as any).access_token as string;
   } catch {}

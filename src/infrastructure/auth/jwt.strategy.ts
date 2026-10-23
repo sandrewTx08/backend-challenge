@@ -7,14 +7,9 @@ import { passportJwtSecret } from 'jwks-rsa';
 export class KeycloakJwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor() {
     const jwksUri = process.env.KEYCLOAK_JWKS_URI;
-    const issuerRaw = process.env.KEYCLOAK_ISSUER ?? '';
-    const issuers = issuerRaw.split(',').map((s) => s.trim()).filter(Boolean);
-
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      // Accept both localhost (local dev) and keycloak (docker) issuers
-      issuer: issuers.length ? issuers : undefined,
       algorithms: ['RS256'],
       secretOrKeyProvider: jwksUri
         ? passportJwtSecret({

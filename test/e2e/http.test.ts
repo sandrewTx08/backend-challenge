@@ -3,7 +3,7 @@
 import { test, expect } from 'bun:test';
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:3000';
-const KEYCLOAK_ISSUER = process.env.KEYCLOAK_ISSUER ?? 'http://localhost:8080/realms/wagering';
+const KEYCLOAK_ISSUER = (process.env.KEYCLOAK_ISSUER ?? 'http://localhost:8080/realms/wagering').split(',')[0].trim();
 const KEYCLOAK_CLIENT_SECRET = process.env.KEYCLOAK_CLIENT_SECRET ?? 'wagering-api-secret';
 const KEYCLOAK_USERNAME = process.env.KEYCLOAK_TEST_USERNAME ?? 'testuser';
 const KEYCLOAK_PASSWORD = process.env.KEYCLOAK_TEST_PASSWORD ?? 'testpass';
@@ -18,22 +18,18 @@ try {
   serverUp = false;
 }
 // Try to obtain a Keycloak token from multiple possible hosts
-const kcHosts = ['http://localhost:8080', 'http://keycloak:8080', KEYCLOAK_ISSUER.replace(/\/realms\/.*/, '')];
-for (const host of kcHosts) {
-  if (token) break;
-  try {
-    const tr = await fetch(`${host}/realms/wagering/protocol/openid-connect/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `grant_type=password&client_id=wagering-api&client_secret=${KEYCLOAK_CLIENT_SECRET}&username=${KEYCLOAK_USERNAME}&password=${KEYCLOAK_PASSWORD}`,
-    });
-    if (tr.ok) {
-      const j: any = await tr.json();
-      token = j.access_token ?? null;
-    }
-  } catch {
-    // try next
+try {
+  const tr = await fetch(`${KEYCLOAK_ISSUER}/protocol/openid-connect/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=password&client_id=wagering-api&client_secret=${KEYCLOAK_CLIENT_SECRET}&username=${KEYCLOAK_USERNAME}&password=${KEYCLOAK_PASSWORD}`,
+  });
+  if (tr.ok) {
+    const j: any = await tr.json();
+    token = j.access_token ?? null;
   }
+} catch {
+  token = null;
 }
 // If no token, check if the API is in no-op auth mode (protected endpoint accessible without token)
 if (!token && serverUp) {
