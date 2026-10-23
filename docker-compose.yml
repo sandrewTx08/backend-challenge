@@ -11,7 +11,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d wagering"]
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER} -d ${PGDATABASE}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -39,22 +39,54 @@ services:
 
   app:
     build: .
-    container_name: wagering-app
     depends_on:
       postgres:
         condition: service_healthy
       localstack:
         condition: service_healthy
-    env_file:
-      - .env.docker
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${PORT}
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: ${PGUSER}
+      PGPASSWORD: ${PGPASSWORD}
+      PGDATABASE: ${PGDATABASE}
+      AWS_REGION: ${AWS_REGION}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_ENDPOINT: http://localstack:4566
+      SQS_QUEUE_URL: ${SQS_QUEUE_URL}
+      SQS_DLQ_URL: ${SQS_DLQ_URL}
+      SQS_CONSUMER_NAME: ${SQS_CONSUMER_NAME}
+      EVENTS_QUEUE_URL: ${EVENTS_QUEUE_URL}
+      OUTBOX_POLL_INTERVAL_MS: ${OUTBOX_POLL_INTERVAL_MS}
+      OUTBOX_MAX_ATTEMPTS: ${OUTBOX_MAX_ATTEMPTS}
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER}
+      KEYCLOAK_JWKS_URI: ${KEYCLOAK_JWKS_URI}
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE}
+    expose:
+      - "3000"
+    deploy:
+      replicas: ${API_REPLICAS}
+      restart_policy:
+        condition: on-failure
+
+  proxy:
+    image: nginx:alpine
+    container_name: wagering-proxy
+    depends_on:
+      - app
     ports:
-      - "3000:3000"
+      - "${PROXY_PORT}:3000"
+    volumes:
+      - "./.nginx/nginx.conf:/etc/nginx/nginx.conf:ro"
     restart: unless-stopped
 
   keycloak:
     image: quay.io/keycloak/keycloak:25.0.0
     container_name: wagering-keycloak
-    command: start-dev --import-realm
+    command: ${KEYCLOAK_COMMAND}
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
@@ -68,7 +100,7 @@ services:
     depends_on:
       - postgres
     healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080; echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; grep -q '200 OK' <&3"]
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080 && echo ok"]
       interval: 10s
       timeout: 5s
       retries: 30
