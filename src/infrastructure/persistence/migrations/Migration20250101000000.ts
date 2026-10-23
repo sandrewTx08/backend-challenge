@@ -1,4 +1,4 @@
-import { Migration } from '@mikro-orm/migrations';
+import { Migration } from "@mikro-orm/migrations";
 
 export class Migration20250101000000 extends Migration {
   async up(): Promise<void> {
@@ -77,23 +77,23 @@ export class Migration20250101000000 extends Migration {
     `);
 
     this.addSql(`
-      CREATE OR REPLACE FUNCTION prevent_ledger_mutation() RETURNS trigger AS $$
+      CREATE OR REPLACE FUNCTION enforce_immutability() RETURNS trigger AS $$
       BEGIN
-        RAISE EXCEPTION 'wallet_ledger_entries is append-only: % is not allowed', TG_OP;
+        RAISE EXCEPTION 'Audit Violation: Table "%" is protected. Operation "%" is strictly prohibited.', TG_TABLE_NAME, TG_OP;
       END;
       $$ LANGUAGE plpgsql;
     `);
 
     this.addSql(`
-      CREATE TRIGGER trg_prevent_ledger_delete
-      BEFORE DELETE ON wallet_ledger_entries
-      FOR EACH ROW EXECUTE FUNCTION prevent_ledger_mutation();
+      CREATE TRIGGER trg_wager_no_delete
+      BEFORE DELETE ON wager_transactions
+      FOR EACH ROW EXECUTE FUNCTION enforce_immutability();
     `);
 
     this.addSql(`
-      CREATE TRIGGER trg_prevent_ledger_update
-      BEFORE UPDATE ON wallet_ledger_entries
-      FOR EACH ROW EXECUTE FUNCTION prevent_ledger_mutation();
+      CREATE TRIGGER trg_ledger_immutability
+      BEFORE UPDATE OR DELETE ON wallet_ledger_entries
+      FOR EACH ROW EXECUTE FUNCTION enforce_immutability();
     `);
 
     this.addSql(`
@@ -136,10 +136,17 @@ export class Migration20250101000000 extends Migration {
   }
 
   async down(): Promise<void> {
-    this.addSql('DROP TABLE IF EXISTS outbox_messages;');
-    this.addSql('DROP TABLE IF EXISTS inbox_messages;');
-    this.addSql('DROP TABLE IF EXISTS wallet_ledger_entries;');
-    this.addSql('DROP TABLE IF EXISTS wager_transactions;');
-    this.addSql('DROP TABLE IF EXISTS wallets;');
+    this.addSql(
+      "DROP TRIGGER IF EXISTS trg_ledger_immutability ON wallet_ledger_entries;"
+    );
+    this.addSql(
+      "DROP TRIGGER IF EXISTS trg_wager_no_delete ON wager_transactions;"
+    );
+    this.addSql("DROP FUNCTION IF EXISTS enforce_immutability;");
+    this.addSql("DROP TABLE IF EXISTS outbox_messages;");
+    this.addSql("DROP TABLE IF EXISTS inbox_messages;");
+    this.addSql("DROP TABLE IF EXISTS wallet_ledger_entries;");
+    this.addSql("DROP TABLE IF EXISTS wager_transactions;");
+    this.addSql("DROP TABLE IF EXISTS wallets;");
   }
 }
