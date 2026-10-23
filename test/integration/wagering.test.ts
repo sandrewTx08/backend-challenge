@@ -351,6 +351,36 @@ test('ledger cursor pagination returns pages and nextCursor', async () => {
   });
 });
 
+// README Section 6.4 / 5.5: ledger is append-only; all mutations (DELETE/UPDATE) must be rejected at DB level
+test('ledger is append-only: DELETE and UPDATE on wallet_ledger_entries are rejected', async () => {
+  await ctx.withEm(async (c) => {
+    const w = await c.openWallet.execute({ playerId: 'pApp', initialBalance: Money.from({ amount: '10.00', currency: 'BRL' }), correlationId: 'capp' });
+    const entries = (await c.getLedger.execute(w.walletId)).entries;
+    expect(entries.length).toBeGreaterThan(0);
+    const entryId = entries[0].id;
+
+    // DELETE must fail
+    let deleteThrew = false;
+    try {
+      const em = ctx.orm.em.fork();
+      await em.getConnection().execute('DELETE FROM wallet_ledger_entries WHERE id = ?', [entryId]);
+    } catch (e) {
+      deleteThrew = true;
+    }
+    expect(deleteThrew).toBe(true);
+
+    // UPDATE must fail
+    let updateThrew = false;
+    try {
+      const em = ctx.orm.em.fork();
+      await em.getConnection().execute("UPDATE wallet_ledger_entries SET money_amount = '999.00' WHERE id = ?", [entryId]);
+    } catch (e) {
+      updateThrew = true;
+    }
+    expect(updateThrew).toBe(true);
+  });
+});
+
 // README Section 13: Reconciliation invariant
 test('Reconciliation: stored balance equals ledger-calculated balance', async () => {
   await ctx.withEm(async (c) => {
