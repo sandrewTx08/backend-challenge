@@ -46,7 +46,7 @@ test('concurrent bets: exactly one processed, one rejected, balance 20.00, one d
     const wallet = await c2.getWallet.execute(walletId);
     expect(wallet.balance.toString()).toBe('20.00');
 
-    const entries = await c2.getLedger.execute(walletId);
+    const { entries } = await c2.getLedger.execute(walletId);
     const debits = entries.filter((e) => e.direction === 'DEBIT' && e.money.toString() === '80.00');
     expect(debits.length).toBe(1);
   });

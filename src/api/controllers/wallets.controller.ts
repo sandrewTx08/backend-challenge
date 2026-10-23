@@ -70,12 +70,11 @@ export class WalletsController {
     @Query('limit') limit?: string,
     @Query('cursor') cursor?: string,
   ) {
-    const entries = await this.getLedger.execute(walletId);
     const lim = limit ? parseInt(limit, 10) : 50;
-    const sliced = entries.slice(0, lim);
+    const { entries, nextCursor } = await this.getLedger.execute(walletId, lim, cursor);
     return {
       walletId,
-      entries: sliced.map((e) => ({
+      entries: entries.map((e) => ({
         id: e.id,
         transactionId: e.transactionId,
         direction: e.direction,
@@ -84,7 +83,7 @@ export class WalletsController {
         balanceAfter: e.balanceAfter.toJSON(),
         createdAt: e.createdAt.toISOString(),
       })),
-      nextCursor: null,
+      nextCursor,
     };
   }
 

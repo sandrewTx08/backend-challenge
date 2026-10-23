@@ -28,7 +28,7 @@ test('BET success debits balance and creates one DEBIT ledger entry', async () =
     });
     expect(res.status).toBe(WagerTransactionStatus.Processed);
     expect(res.balance.toString()).toBe('75.00');
-    const entries = await c.getLedger.execute(w.walletId);
+    const { entries } = await c.getLedger.execute(w.walletId);
     expect(entries.length).toBe(2); // OPENING credit + BET debit
     const debit = entries.find((e) => e.direction === 'DEBIT');
     expect(debit).toBeDefined();
@@ -48,7 +48,7 @@ test('BET rejection on insufficient balance: REJECTED, no balance change, no led
     });
     expect(res.status).toBe(WagerTransactionStatus.Rejected);
     expect(res.balance.toString()).toBe('10.00');
-    const entries = await c.getLedger.execute(w.walletId);
+    const { entries } = await c.getLedger.execute(w.walletId);
     // only OPENING credit
     expect(entries.filter((e) => e.direction === 'DEBIT').length).toBe(0);
   });
@@ -66,7 +66,7 @@ test('WIN credits balance and creates one CREDIT ledger entry', async () => {
     });
     expect(res.status).toBe(WagerTransactionStatus.Processed);
     expect(res.balance.toString()).toBe('15.00');
-    const entries = await c.getLedger.execute(w.walletId);
+    const { entries } = await c.getLedger.execute(w.walletId);
     const credits = entries.filter((e) => e.direction === 'CREDIT');
     expect(credits.length).toBe(2); // opening + win
   });
@@ -84,7 +84,7 @@ test('LOSS records result without balance change or ledger entry', async () => {
     });
     expect(res.status).toBe(WagerTransactionStatus.Processed);
     expect(res.balance.toString()).toBe('10.00');
-    const entries = await c.getLedger.execute(w.walletId);
+    const { entries } = await c.getLedger.execute(w.walletId);
     // only opening credit
     expect(entries.length).toBe(1);
   });
@@ -316,6 +316,38 @@ test('ROLLBACK producing negative balance rejected with NEGATIVE_BALANCE_WOULD_R
       referenceExternalTransactionId: 'winY', correlationId: 'cy2',
     });
     expect(res.status).toBe(WagerTransactionStatus.Rejected);
+  });
+});
+
+// README Section 9: Cursor-based pagination on ledger
+test('ledger cursor pagination returns pages and nextCursor', async () => {
+  await ctx.withEm(async (c) => {
+    const w = await c.openWallet.execute({ playerId: 'pPag', initialBalance: Money.from({ amount: '1000.00', currency: 'BRL' }), correlationId: 'cpag' });
+    // create several BETs to generate ledger entries
+    for (let i = 0; i < 5; i++) {
+      await c.submit.execute({
+        providerId: 'pa', externalTransactionId: `pag-${i}`, idempotencyKey: `pa:pag-${i}`,
+        playerId: 'pPag', walletId: w.walletId, roundId: `rpag-${i}`, gameId: 'gpag',
+        kind: WagerTransactionKind.Bet, money: Money.from({ amount: '10.00', currency: 'BRL' }),
+        correlationId: 'cpag',
+      });
+    }
+    // page 1
+    const page1 = await c.getLedger.execute(w.walletId, 2);
+    expect(page1.entries.length).toBe(2);
+    expect(page1.nextCursor).not.toBeNull();
+    // page 2
+    const page2 = await c.getLedger.execute(w.walletId, 2, page1.nextCursor!);
+    expect(page2.entries.length).toBe(2);
+    // ids distinct
+    const ids1 = page1.entries.map((e) => e.id);
+    const ids2 = page2.entries.map((e) => e.id);
+    for (const id of ids2) expect(ids1).not.toContain(id);
+    // last page
+    const page3 = await c.getLedger.execute(w.walletId, 10, page2.nextCursor!);
+    // remaining: opening + 5 bets = 6 total; consumed 2+2=4; remaining 2
+    expect(page3.entries.length).toBe(2);
+    expect(page3.nextCursor).toBeNull();
   });
 });
 

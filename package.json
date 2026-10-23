@@ -15,6 +15,7 @@
     "test:unit": "bun test test/unit",
     "test:integration": "bun test test/integration",
     "test:concurrency": "bun test test/concurrency",
+    "test:load": "bun run test/load.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "bunx eslint 'src/**/*.ts' 'test/**/*.ts' 2>/dev/null || true"
   },

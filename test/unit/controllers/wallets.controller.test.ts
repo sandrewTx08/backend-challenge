@@ -5,7 +5,7 @@ import { Money } from '../../../src/domain/common/money';
 function makeController(overrides: any = {}) {
   const openWallet = { execute: async () => ({ walletId: 'w1', playerId: 'p1', balance: Money.from({ amount: '10.00', currency: 'BRL' }), version: 1 }) };
   const getWallet = { execute: async () => ({ id: 'w1', playerId: 'p1', balance: Money.from({ amount: '10.00', currency: 'BRL' }), version: 1 }) };
-  const getLedger = { execute: async () => [] };
+  const getLedger = { execute: async () => ({ entries: [], nextCursor: null }) };
   const reconcile = { execute: async () => ({ walletId: 'w1', storedBalance: Money.from({ amount: '10.00', currency: 'BRL' }), calculatedBalance: Money.from({ amount: '10.00', currency: 'BRL' }), difference: Money.from({ amount: '0.00', currency: 'BRL' }), consistent: true, checkedEntries: 0 }) };
   return new WalletsController(
     { ...openWallet, ...overrides.openWallet } as any,
