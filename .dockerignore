@@ -1,0 +1,16 @@
+node_modules
+.git
+.gitignore
+.env
+.env.docker
+.env.local
+dist
+build
+coverage
+*.log
+.localstack
+.keycloak
+volume
+npm-debug.log*
+.DS_Store
+Thumbs.db

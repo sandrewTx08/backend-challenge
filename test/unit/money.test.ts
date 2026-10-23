@@ -1,6 +1,7 @@
 import { test, expect } from 'bun:test';
 import { Money, MoneyValidationError } from '../../src/domain/common/money';
 
+// README Section 6.1: Money amount received/serialized as decimal string scale 2
 test('Money.from parses decimal string', () => {
   const m = Money.from({ amount: '25.00', currency: 'BRL' });
   expect(m.toString()).toBe('25.00');

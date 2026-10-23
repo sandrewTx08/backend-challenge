@@ -87,7 +87,7 @@ export class SubmitWagerTransactionUseCase {
       };
     }
 
-    const wallet = await this.wallets.findById(cmd.walletId);
+    const wallet = await this.wallets.findById(cmd.walletId, true);
     if (!wallet) {
       throw new NotFoundError('wallet not found');
     }

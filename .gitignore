@@ -9,3 +9,8 @@ volume/
 npm-debug.log*
 coverage/
 .turbo/
+.DS_Store
+Thumbs.db
+*.log
+.localstack/data
+.keycloak/data

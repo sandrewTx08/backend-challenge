@@ -15,6 +15,7 @@ function makeController(overrides: any = {}) {
   );
 }
 
+// README Section 9: POST /wallets creates wallet with balance and version
 test('WalletsController.create returns dto', async () => {
   const ctrl = makeController();
   const res = await ctrl.create({ playerId: 'p1', initialBalance: { amount: '10.00', currency: 'BRL' } } as any);

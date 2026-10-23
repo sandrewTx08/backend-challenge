@@ -1,8 +1,9 @@
-import { EntityManager } from '@mikro-orm/core';
+import { EntityManager, LockMode } from '@mikro-orm/core';
 import { Wallet } from '../../../domain/wallet/wallet.js';
 import { Money } from '../../../domain/common/money.js';
 import { WalletEntity } from '../entities/wallet.entity.js';
 import { WalletRepositoryPort } from '../../../application/ports/wallet-repository.port.js';
+import { getCurrentEm } from '../em-context.js';
 
 export class MikroWalletRepository implements WalletRepositoryPort {
   constructor(private readonly getEm: () => EntityManager) {}
@@ -13,13 +14,19 @@ export class MikroWalletRepository implements WalletRepositoryPort {
     return em;
   }
 
-  async findById(id: string): Promise<Wallet | null> {
-    const e = await this.em.findOne(WalletEntity, { id });
+  async findById(id: string, lock = false): Promise<Wallet | null> {
+    const e = await this.em.findOne(
+      WalletEntity,
+      { id },
+      lock
+        ? { lockMode: LockMode.PESSIMISTIC_WRITE }
+        : { refresh: true },
+    );
     return e ? this.toDomain(e) : null;
   }
 
   async findByPlayerAndCurrency(playerId: string, currency: string): Promise<Wallet | null> {
-    const e = await this.em.findOne(WalletEntity, { playerId, currency });
+    const e = await this.em.findOne(WalletEntity, { playerId, currency }, { refresh: true });
     return e ? this.toDomain(e) : null;
   }
 

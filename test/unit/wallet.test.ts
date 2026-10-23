@@ -2,6 +2,7 @@ import { test, expect } from 'bun:test';
 import { Wallet } from '../../src/domain/wallet/wallet';
 import { Money } from '../../src/domain/common/money';
 
+// README Section 6.2: version starts at 1 after creation; balance never negative
 test('Wallet.open sets balance and version 1', () => {
   const w = Wallet.open({ id: 'w1', playerId: 'p1', initialBalance: Money.from({ amount: '100.00', currency: 'BRL' }) });
   expect(w.balance.toString()).toBe('100.00');

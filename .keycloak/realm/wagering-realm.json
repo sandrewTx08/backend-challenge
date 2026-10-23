@@ -1,16 +1,16 @@
 {
-  "realm": "${env.KEYCLOAK_REALM:wagering}",
+  "realm": "wagering",
   "enabled": true,
   "displayName": "Wagering Realm",
   "accessTokenLifespan": 3600,
   "clients": [
     {
-      "clientId": "${env.KEYCLOAK_CLIENT_ID:wagering-api}",
+      "clientId": "wagering-api",
       "name": "Wagering API",
       "enabled": true,
       "protocol": "openid-connect",
       "publicClient": false,
-      "secret": "${env.KEYCLOAK_CLIENT_SECRET:wagering-api-secret}",
+      "secret": "wagering-api-secret",
       "serviceAccountsEnabled": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
@@ -21,13 +21,13 @@
   ],
   "users": [
     {
-      "username": "${env.KEYCLOAK_TEST_USERNAME:testuser}",
+      "username": "testuser",
       "enabled": true,
       "email": "test@example.com",
       "firstName": "Test",
       "lastName": "User",
       "credentials": [
-        { "type": "password", "value": "${env.KEYCLOAK_TEST_PASSWORD:testpass}", "temporary": false }
+        { "type": "password", "value": "testpass", "temporary": false }
       ],
       "realmRoles": ["user"]
     }

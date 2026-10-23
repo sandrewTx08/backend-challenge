@@ -89,6 +89,7 @@ export class WalletsController {
   }
 
   @Post(':walletId/reconciliation')
+  @HttpCode(HttpStatus.OK)
   async reconcileWallet(@Param('walletId') walletId: string): Promise<ReconciliationResponseDto> {
     const r = await this.reconcile.execute(walletId);
     return {

@@ -28,7 +28,7 @@ async function bootstrap() {
 
   // Request-scoped EntityManager via ALS
   app.use((req: any, res: any, next: any) => {
-    const em = orm.em.fork();
+    const em = orm.em.fork({ clear: true });
     runWithEm(em, () => next()).catch(next);
   });
 
