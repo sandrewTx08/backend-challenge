@@ -95,6 +95,15 @@ bun docker:prod
 
 Health: `curl http://localhost:3000/health/live`
 
+### Obtaining an Auth Token (Keycloak)
+
+To test protected endpoints, you can request a JWT Bearer token directly from Keycloak using the test user credentials:
+
+```bash
+curl -X POST http://localhost:8080/realms/wagering/protocol/openid-connect/token \
+  -d 'grant_type=password&client_id=wagering-api&client_secret=wagering-api-secret&username=testuser&password=testpass'
+```
+
 ## Tests
 
 (Ensure Keycloak is fully ready before running tests/load tests; requests may return `401 Unauthorized` if Keycloak is still starting up or initializing).
@@ -109,7 +118,3 @@ Health: `curl http://localhost:3000/health/live`
 - Reconciliation reports divergence but never silently corrects.
 - Pending-reference worker runs in-process (single leader not enforced;
   reprocessing is idempotent).
-  ```bash
-  curl -X POST http://localhost:3000/realms/wagering/protocol/openid-connect/token \
-    -d 'grant_type=password&client_id=wagering-api&client_secret=wagering-api-secret&username=testuser&password=testpass'
-  ```
