@@ -77,6 +77,26 @@ export class Migration20250101000000 extends Migration {
     `);
 
     this.addSql(`
+      CREATE OR REPLACE FUNCTION prevent_ledger_mutation() RETURNS trigger AS $$
+      BEGIN
+        RAISE EXCEPTION 'wallet_ledger_entries is append-only: % is not allowed', TG_OP;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+
+    this.addSql(`
+      CREATE TRIGGER trg_prevent_ledger_delete
+      BEFORE DELETE ON wallet_ledger_entries
+      FOR EACH ROW EXECUTE FUNCTION prevent_ledger_mutation();
+    `);
+
+    this.addSql(`
+      CREATE TRIGGER trg_prevent_ledger_update
+      BEFORE UPDATE ON wallet_ledger_entries
+      FOR EACH ROW EXECUTE FUNCTION prevent_ledger_mutation();
+    `);
+
+    this.addSql(`
       CREATE TABLE IF NOT EXISTS inbox_messages (
         id UUID PRIMARY KEY,
         message_id VARCHAR(256) NOT NULL,
