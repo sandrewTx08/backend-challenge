@@ -35,7 +35,7 @@ services:
       test: ["CMD", "curl", "-fsS", "http://localhost:4566/_localstack/health"]
       interval: 5s
       timeout: 5s
-      retries: 20
+      retries: 5
 
   app:
     build: .
@@ -102,10 +102,10 @@ services:
     depends_on:
       - postgres
     healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080 && echo ok"]
+      test: /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080/${KC_HTTP_RELATIVE_PATH}/ --realm master --user ${KEYCLOAK_ADMIN} --password ${KEYCLOAK_ADMIN_PASSWORD}
       interval: 10s
       timeout: 5s
-      retries: 30
+      retries: 10
 
 volumes:
   pgdata:
