@@ -43,7 +43,7 @@ export class HealthController {
       const jwksUri = process.env.KEYCLOAK_JWKS_URI;
       if (jwksUri) {
         const res = await fetch(jwksUri);
-        if (res.ok) {
+        if ((await res.body?.json()).keys.at(0)) {
           checks.keycloak = 'ok';
         } else {
           checks.keycloak = 'fail';
